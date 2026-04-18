@@ -1,3 +1,3 @@
 pub mod list;
 
-pub use list::list_current_dir;
+pub use list::{FileEntry, list_current_dir};
