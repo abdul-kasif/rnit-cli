@@ -1,6 +1,7 @@
+use serde::Serialize;
 use std::{fs, io};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct FileEntry {
     pub name: String,
     pub size: u64,
