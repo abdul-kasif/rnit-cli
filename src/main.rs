@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
 
+mod domain;
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
