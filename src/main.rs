@@ -39,7 +39,11 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
             FsCommands::List => {
                 let entries = list_current_dir()?;
                 for entry in entries {
-                    println!("{}", entry.name);
+                    if entry.file_type.is_dir() {
+                        println!("{}/ [DIR]", entry.name);
+                    } else {
+                        println!("{} {} bytes", entry.name, entry.size)
+                    };
                 }
             }
         },

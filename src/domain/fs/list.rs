@@ -1,8 +1,13 @@
-use std::{fs, io};
+use std::{
+    fs::{self, FileType},
+    io,
+};
 
 #[derive(Debug)]
 pub struct FileEntry {
     pub name: String,
+    pub size: u64,
+    pub file_type: FileType,
 }
 
 pub fn list_current_dir() -> Result<Vec<FileEntry>, io::Error> {
@@ -11,11 +16,13 @@ pub fn list_current_dir() -> Result<Vec<FileEntry>, io::Error> {
     let mut file_list: Vec<FileEntry> = entries
         .flatten()
         .filter_map(|entry| {
-            entry
-                .file_name()
-                .into_string()
-                .ok()
-                .map(|name| FileEntry { name })
+            let metadata = entry.metadata().ok()?;
+            let name = entry.file_name().into_string().ok()?;
+            Some(FileEntry {
+                name,
+                size: metadata.len(),
+                file_type: metadata.file_type(),
+            })
         })
         .collect();
 
