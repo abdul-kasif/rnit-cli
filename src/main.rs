@@ -1,36 +1,49 @@
 use clap::{Parser, Subcommand};
-
 mod domain;
 
+use crate::domain::fs::list_current_dir;
+
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(name = "Rnit", version, about = "Rnit CLI Tool")]
 struct Cli {
     #[command(subcommand)]
-    command: Command,
+    command: Commands,
 }
 
 #[derive(Subcommand)]
-enum Command {
+enum Commands {
     /// FileSystem related operations
     Fs {
         #[command(subcommand)]
-        fs_command: FsCommand,
+        action: FsCommands,
     },
 }
 
 #[derive(Subcommand)]
-enum FsCommand {
+enum FsCommands {
     /// List files in the current directory
     List,
 }
 fn main() {
     let cli = Cli::parse();
 
+    if let Err(e) = run(cli) {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+fn run(cli: Cli) -> Result<(), std::io::Error> {
     match cli.command {
-        Command::Fs { fs_command } => match fs_command {
-            FsCommand::List => {
-                println!("FS LIST triggered");
+        Commands::Fs { action } => match action {
+            FsCommands::List => {
+                let entries = list_current_dir()?;
+                for entry in entries {
+                    println!("{}", entry.name);
+                }
             }
         },
     }
+
+    Ok(())
 }
