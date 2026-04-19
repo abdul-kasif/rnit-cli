@@ -4,7 +4,7 @@ mod output;
 
 use crate::{
     domain::fs::list_current_dir,
-    output::{json::print_json, table::print_table},
+    output::{OutputFormat, print_output},
 };
 
 #[derive(Parser)]
@@ -44,12 +44,14 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
     match cli.command {
         Commands::Fs { action } => match action {
             FsCommands::List { json } => {
-                let entries = list_current_dir()?;
-                if json {
-                    print_json(&entries);
+                let format = if json {
+                    OutputFormat::Json
                 } else {
-                    print_table(&entries);
-                }
+                    OutputFormat::Table
+                };
+
+                let entries = list_current_dir()?;
+                print_output(&entries, &format);
             }
         },
     }
