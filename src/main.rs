@@ -29,6 +29,9 @@ enum FsCommands {
     List {
         #[arg(long)]
         json: bool,
+
+        #[arg(short, long, default_value_t = false)]
+        all: bool,
     },
 }
 fn main() {
@@ -43,14 +46,14 @@ fn main() {
 fn run(cli: Cli) -> Result<(), std::io::Error> {
     match cli.command {
         Commands::Fs { action } => match action {
-            FsCommands::List { json } => {
+            FsCommands::List { json, all } => {
                 let format = if json {
                     OutputFormat::Json
                 } else {
                     OutputFormat::Table
                 };
 
-                let entries = list_current_dir()?;
+                let entries = list_current_dir(all)?;
                 print_output(&entries, &format);
             }
         },
