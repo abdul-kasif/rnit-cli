@@ -2,7 +2,10 @@ use clap::{Parser, Subcommand};
 mod domain;
 mod output;
 
-use crate::{domain::fs::list_current_dir, output::json::print_json};
+use crate::{
+    domain::fs::list_current_dir,
+    output::{json::print_json, table::print_table},
+};
 
 #[derive(Parser)]
 #[command(name = "Rnit", version, about = "Rnit CLI Tool")]
@@ -45,13 +48,7 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 if json {
                     print_json(&entries);
                 } else {
-                    for entry in entries {
-                        if entry.is_dir {
-                            println!("{}/ [DIR]", entry.name);
-                        } else {
-                            println!("{} {}B", entry.name, entry.size)
-                        };
-                    }
+                    print_table(&entries);
                 }
             }
         },
