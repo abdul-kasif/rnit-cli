@@ -1,22 +1,13 @@
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 mod core;
 mod domain;
 mod output;
 
 use crate::{
-    core::apply_limit,
+    core::{QueryArgs, apply_limit},
     domain::fs::{FsSortField, list_current_dir},
     output::{OutputFormat, print_output},
 };
-
-#[derive(Args, Debug)]
-pub struct QueryArgs<T: ValueEnum + Clone + Send + Sync + 'static> {
-    #[arg(long, value_enum)]
-    pub sort: Option<T>,
-
-    #[arg(long)]
-    pub limit: Option<usize>,
-}
 
 #[derive(Parser)]
 #[command(name = "Rnit", version, about = "Rnit CLI Tool")]
