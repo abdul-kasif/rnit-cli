@@ -11,6 +11,9 @@ use crate::{
 pub struct QueryArgs<T: ValueEnum + Clone + Send + Sync + 'static> {
     #[arg(long, value_enum)]
     pub sort: Option<T>,
+
+    #[arg(long)]
+    pub limit: Option<usize>,
 }
 
 #[derive(Parser)]
@@ -62,7 +65,7 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                     OutputFormat::Table
                 };
 
-                let entries = list_current_dir(all, query.sort)?;
+                let entries = list_current_dir(all, query.sort, query.limit)?;
                 print_output(&entries, &format);
             }
         },
