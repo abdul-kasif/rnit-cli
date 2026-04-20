@@ -4,8 +4,8 @@ mod domain;
 mod output;
 
 use crate::{
-    core::{QueryArgs, apply_limit},
-    domain::fs::{FsSortField, list_current_dir},
+    core::{QueryArgs, apply_limit, apply_sort},
+    domain::fs::{FileEntry, FsSortField, list_current_dir},
     output::{OutputFormat, print_output},
 };
 
@@ -58,7 +58,14 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                     OutputFormat::Table
                 };
 
-                let mut entries = list_current_dir(all, query.sort)?;
+                let mut entries = list_current_dir(all)?;
+
+                let sort_fn = query.sort.map(|field| match field {
+                    FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),
+                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| b.size.cmp(&a.size),
+                });
+
+                apply_sort(&mut entries, sort_fn);
                 apply_limit(&mut entries, query.limit);
                 print_output(&entries, &format);
             }
