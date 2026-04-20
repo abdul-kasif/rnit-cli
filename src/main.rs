@@ -1,11 +1,17 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 mod domain;
 mod output;
 
 use crate::{
-    domain::fs::list_current_dir,
+    domain::fs::{FsSortField, list_current_dir},
     output::{OutputFormat, print_output},
 };
+
+#[derive(Args, Debug)]
+pub struct QueryArgs<T: ValueEnum + Clone + Send + Sync + 'static> {
+    #[arg(long, value_enum)]
+    pub sort: Option<T>,
+}
 
 #[derive(Parser)]
 #[command(name = "Rnit", version, about = "Rnit CLI Tool")]
@@ -32,6 +38,9 @@ enum FsCommands {
 
         #[arg(short, long, default_value_t = false)]
         all: bool,
+
+        #[command(flatten)]
+        query: QueryArgs<FsSortField>,
     },
 }
 fn main() {
@@ -46,14 +55,14 @@ fn main() {
 fn run(cli: Cli) -> Result<(), std::io::Error> {
     match cli.command {
         Commands::Fs { action } => match action {
-            FsCommands::List { json, all } => {
+            FsCommands::List { json, all, query } => {
                 let format = if json {
                     OutputFormat::Json
                 } else {
                     OutputFormat::Table
                 };
 
-                let entries = list_current_dir(all)?;
+                let entries = list_current_dir(all, query.sort)?;
                 print_output(&entries, &format);
             }
         },
