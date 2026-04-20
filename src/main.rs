@@ -1,8 +1,10 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+mod core;
 mod domain;
 mod output;
 
 use crate::{
+    core::apply_limit,
     domain::fs::{FsSortField, list_current_dir},
     output::{OutputFormat, print_output},
 };
@@ -65,7 +67,8 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                     OutputFormat::Table
                 };
 
-                let entries = list_current_dir(all, query.sort, query.limit)?;
+                let mut entries = list_current_dir(all, query.sort)?;
+                apply_limit(&mut entries, query.limit);
                 print_output(&entries, &format);
             }
         },

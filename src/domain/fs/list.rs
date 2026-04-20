@@ -19,7 +19,6 @@ pub enum FsSortField {
 pub fn list_current_dir(
     include_hidden: bool,
     sort_by: Option<FsSortField>,
-    limit: Option<usize>,
 ) -> Result<Vec<FileEntry>, io::Error> {
     let entries = fs::read_dir(".")?;
     let mut file_list: Vec<FileEntry> = Vec::new();
@@ -53,8 +52,6 @@ pub fn list_current_dir(
 
     sort_entries(&mut file_list, sort_by);
 
-    limit_entries(&mut file_list, limit);
-
     Ok(file_list)
 }
 
@@ -64,14 +61,5 @@ fn sort_entries(entries: &mut [FileEntry], sort_by: Option<FsSortField>) {
     match field {
         FsSortField::Name => entries.sort_by(|a, b| a.name.cmp(&b.name)),
         FsSortField::Size => entries.sort_by(|a, b| a.size.cmp(&b.size)),
-    }
-}
-
-fn limit_entries(entries: &mut Vec<FileEntry>, limit: Option<usize>) {
-    if let Some(lim) = limit {
-        if lim == 0 {
-            return;
-        }
-        entries.truncate(lim);
     }
 }
