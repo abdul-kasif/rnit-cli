@@ -1,20 +1,5 @@
-use clap::ValueEnum;
-use serde::Serialize;
+use crate::domain::fs::FileEntry;
 use std::{fs, io};
-
-#[derive(Debug, Serialize)]
-pub struct FileEntry {
-    pub name: String,
-    pub size: u64,
-    pub is_dir: bool,
-}
-
-#[derive(ValueEnum, Clone, Debug, PartialEq, Default)]
-pub enum FsSortField {
-    #[default]
-    Name,
-    Size,
-}
 
 pub fn list_current_dir(include_hidden: bool) -> Result<Vec<FileEntry>, io::Error> {
     let entries = fs::read_dir(".")?;
