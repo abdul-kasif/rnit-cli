@@ -1,3 +1,5 @@
+use std::path;
+
 use clap::{Parser, Subcommand};
 mod core;
 mod domain;
@@ -5,7 +7,7 @@ mod output;
 
 use crate::{
     core::{QueryArgs, apply_limit, apply_sort},
-    domain::fs::{FileEntry, FsSortField, list_current_dir},
+    domain::fs::{FileEntry, FsSortField, get_file_info, list_current_dir},
     output::{OutputFormat, print_output},
 };
 
@@ -38,6 +40,15 @@ enum FsCommands {
         #[command(flatten)]
         query: QueryArgs<FsSortField>,
     },
+
+    /// Get information about File/Folder
+    Info {
+        #[arg(index = 1)]
+        path: path::PathBuf,
+
+        #[arg(long)]
+        json: bool,
+    },
 }
 fn main() {
     let cli = Cli::parse();
@@ -68,6 +79,18 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 apply_sort(&mut entries, sort_fn);
                 apply_limit(&mut entries, query.limit);
                 print_output(&entries, &format);
+            }
+
+            FsCommands::Info { path, json } => {
+                let format = if json {
+                    OutputFormat::Json
+                } else {
+                    OutputFormat::Table
+                };
+
+                let entry = get_file_info(&path)?;
+
+                print_output(std::slice::from_ref(&entry), &format);
             }
         },
     }
