@@ -1,43 +1,39 @@
-use crate::domain::fs::FileEntry;
+use crate::core::TableRender;
 
-pub fn print_table(entries: &[FileEntry]) {
-    let max_name_len = entries.iter().map(|e| e.name.len()).max().unwrap_or(4);
+pub fn print_table<T: TableRender>(entries: &[T]) {
+    if entries.is_empty() {
+        return;
+    }
 
-    let name_header = "NAME";
-    let size_header = "SIZE";
-    let type_header = "TYPE";
+    let headers = T::headers();
+    let rows: Vec<Vec<String>> = entries.iter().map(|e| e.row()).collect();
 
-    println!(
-        "{:<width$} {:>9}  {}",
-        name_header,
-        size_header,
-        type_header,
-        width = max_name_len
-    );
+    let mut widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
+    for row in &rows {
+        for (i, cell) in row.iter().enumerate() {
+            if i < widths.len() {
+                widths[i] = widths[i].max(cell.len());
+            }
+        }
+    }
 
-    println!(
-        "{:-<width$} {:->9}  {:->4}",
-        "",
-        "",
-        "",
-        width = max_name_len
-    );
+    let header_line: Vec<String> = headers
+        .iter()
+        .enumerate()
+        .map(|(i, h)| format!("{:<width$}", h, width = widths[i]))
+        .collect();
+    println!("{}", header_line.join("  "));
 
-    for entry in entries {
-        let type_str = if entry.is_dir { "DIR" } else { "FILE" };
+    let separator: Vec<String> = widths.iter().map(|w| "-".repeat(*w)).collect();
+    println!("{}", separator.join("  "));
 
-        let size_str = if entry.is_dir {
-            "-".to_string()
-        } else {
-            format!("{}B", entry.size)
-        };
-
-        println!(
-            "{:<width$} {:>9}  {}",
-            entry.name,
-            size_str,
-            type_str,
-            width = max_name_len
-        );
+    for row in rows {
+        let row_line: Vec<String> = row
+            .iter()
+            .enumerate()
+            .map(|(i, cell)| format!("{:<width$}", cell, width = widths[i]))
+            .collect();
+        println!("{}", row_line.join("  "));
     }
 }
+
