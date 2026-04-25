@@ -2,6 +2,7 @@ use clap::{Args, ValueEnum};
 
 pub mod limit;
 pub mod sort;
+pub mod traits;
 
 #[derive(Args, Debug)]
 pub struct QueryArgs<T: ValueEnum + Clone + Send + Sync + 'static> {
@@ -14,3 +15,5 @@ pub struct QueryArgs<T: ValueEnum + Clone + Send + Sync + 'static> {
 
 pub use limit::apply_limit;
 pub use sort::apply_sort;
+pub use traits::TableRender;
+
