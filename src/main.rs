@@ -6,9 +6,9 @@ mod domain;
 mod output;
 
 use crate::{
-    core::{QueryArgs, apply_limit, apply_sort},
+    core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
     domain::fs::{FileEntry, FsSortField, get_file_info, list_current_dir},
-    output::{OutputFormat, print_output},
+    output::print_output,
 };
 
 #[derive(Parser)]
@@ -31,14 +31,14 @@ enum Commands {
 enum FsCommands {
     /// List files in the current directory
     List {
-        #[arg(long)]
-        json: bool,
-
         #[arg(short, long, default_value_t = false)]
         all: bool,
 
         #[command(flatten)]
         query: QueryArgs<FsSortField>,
+
+        #[command(flatten)]
+        output: OutputArgs,
     },
 
     /// Get information about File/Folder
@@ -46,8 +46,8 @@ enum FsCommands {
         #[arg(index = 1)]
         path: path::PathBuf,
 
-        #[arg(long)]
-        json: bool,
+        #[command(flatten)]
+        output: OutputArgs,
     },
 }
 fn main() {
@@ -62,13 +62,7 @@ fn main() {
 fn run(cli: Cli) -> Result<(), std::io::Error> {
     match cli.command {
         Commands::Fs { action } => match action {
-            FsCommands::List { json, all, query } => {
-                let format = if json {
-                    OutputFormat::Json
-                } else {
-                    OutputFormat::Table
-                };
-
+            FsCommands::List { all, query, output } => {
                 let mut entries = list_current_dir(all)?;
 
                 let sort_fn = query.sort.map(|field| match field {
@@ -78,19 +72,13 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
 
                 apply_sort(&mut entries, sort_fn);
                 apply_limit(&mut entries, query.limit);
-                print_output(&entries, &format);
+                print_output(&entries, &output.format);
             }
 
-            FsCommands::Info { path, json } => {
-                let format = if json {
-                    OutputFormat::Json
-                } else {
-                    OutputFormat::Table
-                };
-
+            FsCommands::Info { path, output } => {
                 let entry = get_file_info(&path)?;
 
-                print_output(std::slice::from_ref(&entry), &format);
+                print_output(std::slice::from_ref(&entry), &output.format);
             }
         },
     }
