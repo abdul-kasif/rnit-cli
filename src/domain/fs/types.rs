@@ -11,8 +11,8 @@ pub struct FileEntry {
 }
 
 impl TableRender for FileEntry {
-    fn headers() -> Vec<&'static str> {
-        vec!["NAME", "SIZE", "TYPE"]
+    fn headers() -> &'static [&'static str] {
+        &["NAME", "SIZE", "TYPE"]
     }
 
     fn row(&self) -> Vec<String> {
