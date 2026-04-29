@@ -6,34 +6,47 @@ pub fn print_table<T: TableRender>(entries: &[T]) {
     }
 
     let headers = T::headers();
-    let rows: Vec<Vec<String>> = entries.iter().map(|e| e.row()).collect();
-
     let mut widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
-    for row in &rows {
+
+    for entry in entries {
+        let row = entry.row();
         for (i, cell) in row.iter().enumerate() {
-            if i < widths.len() {
-                widths[i] = widths[i].max(cell.len());
+            if let Some(w) = widths.get_mut(i) {
+                *w = (*w).max(cell.len());
             }
         }
     }
 
-    let header_line: Vec<String> = headers
+    let header_line = headers
         .iter()
         .enumerate()
-        .map(|(i, h)| format!("{:<width$}", h, width = widths[i]))
-        .collect();
-    println!("{}", header_line.join("  "));
+        .map(|(i, h)| format!("{:<width$}", h, width = widths.get(i).copied().unwrap_or(0)))
+        .collect::<Vec<_>>()
+        .join("  ");
+    println!("{}", header_line);
 
-    let separator: Vec<String> = widths.iter().map(|w| "-".repeat(*w)).collect();
-    println!("{}", separator.join("  "));
+    let separator = widths
+        .iter()
+        .map(|w| "-".repeat(*w))
+        .collect::<Vec<_>>()
+        .join("  ");
+    println!("{}", separator);
 
-    for row in rows {
-        let row_line: Vec<String> = row
+    for entry in entries {
+        let row = entry.row();
+        let row_line = row
             .iter()
             .enumerate()
-            .map(|(i, cell)| format!("{:<width$}", cell, width = widths[i]))
-            .collect();
-        println!("{}", row_line.join("  "));
+            .map(|(i, cell)| {
+                format!(
+                    "{:<width$}",
+                    cell,
+                    width = widths.get(i).copied().unwrap_or(0)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("  ");
+        println!("{}", row_line);
     }
 }
 
