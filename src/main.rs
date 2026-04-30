@@ -7,7 +7,7 @@ mod output;
 
 use crate::{
     core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
-    domain::fs::{FileEntry, FsSortField, get_file_info, list_current_dir},
+    domain::fs::{FileEntry, FsSortField, find_current_dir, get_file_info, list_current_dir},
     output::print_output,
 };
 
@@ -49,6 +49,22 @@ enum FsCommands {
         #[command(flatten)]
         output: OutputArgs,
     },
+
+    /// Find files in the current directory
+    Find {
+        /// Filter by file name (substring match)
+        #[arg(long)]
+        name: Option<String>,
+
+        #[arg(short, long, default_value_t = false)]
+        all: bool,
+
+        #[command(flatten)]
+        query: QueryArgs<FsSortField>,
+
+        #[command(flatten)]
+        output: OutputArgs,
+    },
 }
 fn main() {
     let cli = Cli::parse();
@@ -79,6 +95,24 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 let entry = get_file_info(&path)?;
 
                 print_output(std::slice::from_ref(&entry), &output.format);
+            }
+
+            FsCommands::Find {
+                name,
+                all,
+                query,
+                output,
+            } => {
+                let mut entries = find_current_dir(all, name.as_deref())?;
+
+                let sort_fn = query.sort.map(|field| match field {
+                    FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),
+                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| b.size.cmp(&a.size),
+                });
+
+                apply_sort(&mut entries, sort_fn);
+                apply_limit(&mut entries, query.limit);
+                print_output(&entries, &output.format);
             }
         },
     }
