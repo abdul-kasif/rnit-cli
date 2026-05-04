@@ -83,10 +83,10 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
 
                 let sort_fn = query.sort.map(|field| match field {
                     FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),
-                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| b.size.cmp(&a.size),
+                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| a.size.cmp(&b.size),
                 });
 
-                apply_sort(&mut entries, sort_fn);
+                apply_sort(&mut entries, sort_fn, query.order);
                 apply_limit(&mut entries, query.limit);
                 print_output(&entries, &output.format);
             }
@@ -107,10 +107,10 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
 
                 let sort_fn = query.sort.map(|field| match field {
                     FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),
-                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| b.size.cmp(&a.size),
+                    FsSortField::Size => |a: &FileEntry, b: &FileEntry| a.size.cmp(&b.size),
                 });
 
-                apply_sort(&mut entries, sort_fn);
+                apply_sort(&mut entries, sort_fn, query.order);
                 apply_limit(&mut entries, query.limit);
                 print_output(&entries, &output.format);
             }
