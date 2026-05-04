@@ -1,11 +1,4 @@
-use clap::ValueEnum;
-
-#[derive(ValueEnum, Clone, Debug, Default, PartialEq)]
-pub enum OutputFormat {
-    #[default]
-    Table,
-    Json,
-}
+use crate::core::OutputFormat;
 
 #[derive(clap::Args, Clone, Debug)]
 pub struct OutputArgs {

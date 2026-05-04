@@ -1,11 +1,4 @@
-use clap::ValueEnum;
-
-#[derive(ValueEnum, Clone, Debug, PartialEq, Default)]
-pub enum SortOrder {
-    #[default]
-    Asc,
-    Desc,
-}
+use crate::core::SortOrder;
 
 pub fn apply_sort<T, F>(entries: &mut [T], sort_fn: Option<F>, order: SortOrder)
 where
