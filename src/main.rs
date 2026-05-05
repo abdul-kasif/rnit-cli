@@ -7,7 +7,9 @@ mod output;
 
 use crate::{
     core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
-    domain::fs::{FileEntry, FsSortField, find_current_dir, get_file_info, list_current_dir},
+    domain::fs::{
+        FileEntry, FsSortField, create_entry, find_current_dir, get_file_info, list_current_dir,
+    },
     output::print_output,
 };
 
@@ -65,6 +67,17 @@ enum FsCommands {
         #[command(flatten)]
         output: OutputArgs,
     },
+
+    Create {
+        #[arg(index = 1)]
+        name: String,
+
+        #[arg(long)]
+        dir: bool,
+
+        #[command(flatten)]
+        output: OutputArgs,
+    },
 }
 fn main() {
     let cli = Cli::parse();
@@ -113,6 +126,12 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 apply_sort(&mut entries, sort_fn, query.order);
                 apply_limit(&mut entries, query.limit);
                 print_output(&entries, &output.format);
+            }
+
+            FsCommands::Create { name, dir, output } => {
+                let entry = create_entry(&name, dir)?;
+
+                print_output(std::slice::from_ref(&entry), &output.format);
             }
         },
     }
