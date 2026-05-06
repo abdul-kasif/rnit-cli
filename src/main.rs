@@ -75,6 +75,9 @@ enum FsCommands {
         #[arg(long)]
         dir: bool,
 
+        #[arg(long)]
+        dry_run: bool,
+
         #[command(flatten)]
         output: OutputArgs,
     },
@@ -128,7 +131,18 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 print_output(&entries, &output.format);
             }
 
-            FsCommands::Create { name, dir, output } => {
+            FsCommands::Create {
+                name,
+                dir,
+                dry_run,
+                output,
+            } => {
+                if dry_run {
+                    let entry_type = if dir { "directory" } else { "file" };
+                    println!("[DRY-RUN] Would create {}: {}", entry_type, name);
+                    return Ok(());
+                }
+
                 let entry = create_entry(&name, dir)?;
 
                 print_output(std::slice::from_ref(&entry), &output.format);
