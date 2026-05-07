@@ -1,15 +1,27 @@
 use std::{fs, io, path::Path};
 
-use crate::domain::fs::FileEntry;
+use crate::domain::fs::{FileEntry, validate_entry_name};
 
 pub fn create_entry<P: AsRef<Path>>(path: P, is_dir: bool) -> Result<FileEntry, io::Error> {
     let target = path.as_ref();
+
+    let entry_name = target
+        .file_name()
+        .and_then(|os_str| os_str.to_str())
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Entry name contains invalid UTF-8",
+            )
+        })?;
+
+    validate_entry_name(entry_name)?;
 
     validate_creation_target(target)?;
 
     execute_creation(target, is_dir)?;
 
-    Ok(build_file_entry(target, is_dir))
+    Ok(build_file_entry(entry_name, is_dir))
 }
 
 fn validate_creation_target(path: &Path) -> Result<(), io::Error> {
@@ -43,15 +55,9 @@ fn execute_creation(path: &Path, is_dir: bool) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn build_file_entry(path: &Path, is_dir: bool) -> FileEntry {
-    let name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or_else(|| path.to_str().unwrap_or("unknown"))
-        .to_string();
-
+fn build_file_entry(entry_name: &str, is_dir: bool) -> FileEntry {
     FileEntry {
-        name,
+        name: entry_name.to_string(),
         size: 0,
         is_dir,
     }
