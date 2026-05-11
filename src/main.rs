@@ -9,7 +9,7 @@ use crate::{
     core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
     domain::fs::{
         FileEntry, FsSortField, create_entry, delete_entry, find_current_dir, get_file_info,
-        list_current_dir,
+        list_current_dir, rename_entry,
     },
     output::print_output,
 };
@@ -89,6 +89,20 @@ enum FsCommands {
 
         #[arg(long)]
         dir: bool,
+
+        #[arg(long)]
+        dry_run: bool,
+
+        #[command(flatten)]
+        output: OutputArgs,
+    },
+
+    Rename {
+        #[arg(index = 1)]
+        source: PathBuf,
+
+        #[arg(index = 2)]
+        destination: PathBuf,
 
         #[arg(long)]
         dry_run: bool,
@@ -177,6 +191,25 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
 
                 let entry = delete_entry(&path, dir)?;
 
+                print_output(std::slice::from_ref(&entry), &output.format);
+            }
+
+            FsCommands::Rename {
+                source,
+                destination,
+                dry_run,
+                output,
+            } => {
+                if dry_run {
+                    println!(
+                        "[DRY-RUN] Would rename: \n  from: {} \n  to: {}",
+                        source.display(),
+                        destination.display()
+                    );
+                    return Ok(());
+                }
+
+                let entry = rename_entry(&source, &destination)?;
                 print_output(std::slice::from_ref(&entry), &output.format);
             }
         },
