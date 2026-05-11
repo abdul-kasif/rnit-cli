@@ -1,4 +1,4 @@
-use std::path;
+use std::path::{self, PathBuf};
 
 use clap::{Parser, Subcommand};
 mod core;
@@ -8,7 +8,8 @@ mod output;
 use crate::{
     core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
     domain::fs::{
-        FileEntry, FsSortField, create_entry, find_current_dir, get_file_info, list_current_dir,
+        FileEntry, FsSortField, create_entry, delete_entry, find_current_dir, get_file_info,
+        list_current_dir,
     },
     output::print_output,
 };
@@ -71,6 +72,20 @@ enum FsCommands {
     Create {
         #[arg(index = 1)]
         name: String,
+
+        #[arg(long)]
+        dir: bool,
+
+        #[arg(long)]
+        dry_run: bool,
+
+        #[command(flatten)]
+        output: OutputArgs,
+    },
+
+    Delete {
+        #[arg(index = 1)]
+        path: PathBuf,
 
         #[arg(long)]
         dir: bool,
@@ -144,6 +159,23 @@ fn run(cli: Cli) -> Result<(), std::io::Error> {
                 }
 
                 let entry = create_entry(&name, dir)?;
+
+                print_output(std::slice::from_ref(&entry), &output.format);
+            }
+
+            FsCommands::Delete {
+                path,
+                dir,
+                dry_run,
+                output,
+            } => {
+                if dry_run {
+                    let target_type = if dir { "directory" } else { "file" };
+                    println!("[DRY-RUN] Would delete {}: {}", target_type, path.display());
+                    return Ok(());
+                }
+
+                let entry = delete_entry(&path, dir)?;
 
                 print_output(std::slice::from_ref(&entry), &output.format);
             }
