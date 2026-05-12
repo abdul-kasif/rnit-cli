@@ -8,8 +8,8 @@ mod output;
 use crate::{
     core::{OutputArgs, QueryArgs, apply_limit, apply_sort},
     domain::fs::{
-        FileEntry, FsSortField, create_entry, delete_entry, find_current_dir, get_file_info,
-        list_current_dir, rename_entry,
+        FileEntry, FsError, FsSortField, create_entry, delete_entry, find_current_dir,
+        get_file_info, list_current_dir, rename_entry,
     },
     output::print_output,
 };
@@ -120,7 +120,7 @@ fn main() {
     }
 }
 
-fn run(cli: Cli) -> Result<(), std::io::Error> {
+fn run(cli: Cli) -> Result<(), FsError> {
     match cli.command {
         Commands::Fs { action } => match action {
             FsCommands::List { all, query, output } => {
