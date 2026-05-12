@@ -1,6 +1,9 @@
 use std::{fs, io, path::Path};
 
-use crate::domain::fs::{FileEntry, validate_entry_name};
+use crate::domain::fs::{
+    FileEntry, build_file_entry, ensure_path_exists, ensure_path_not_exists, extract_filename,
+    validate_entry_name, validate_parent_exists,
+};
 
 pub fn rename_entry<P: AsRef<Path>>(source: P, destination: P) -> Result<FileEntry, io::Error> {
     let src = source.as_ref();
@@ -13,65 +16,18 @@ pub fn rename_entry<P: AsRef<Path>>(source: P, destination: P) -> Result<FileEnt
         ));
     }
 
-    let src_metadata = validate_rename_source(src)?;
+    let src_metadata = ensure_path_exists(src, "Source")?;
 
-    let dest_name = dest.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Destination path contains invalid UTF-8",
-        )
-    })?;
+    let dest_name = extract_filename(dest)?;
+    validate_entry_name(&dest_name)?;
 
-    validate_entry_name(dest_name)?;
+    validate_parent_exists(dest)?;
 
-    validate_rename_destination(dest)?;
+    ensure_path_not_exists(dest, "Destination")?;
 
     execute_rename(src, dest)?;
 
-    Ok(FileEntry {
-        name: dest_name.to_string(),
-        size: src_metadata.len(),
-        is_dir: src_metadata.is_dir(),
-    })
-}
-
-fn validate_rename_source(src: &Path) -> Result<fs::Metadata, io::Error> {
-    let metadata = fs::metadata(src).map_err(|err| {
-        if err.kind() == io::ErrorKind::NotFound {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("Source not found: {}", src.display()),
-            )
-        } else {
-            err
-        }
-    })?;
-
-    Ok(metadata)
-}
-
-fn validate_rename_destination(dest: &Path) -> Result<(), io::Error> {
-    if let Some(parent) = dest.parent()
-        && !parent.as_os_str().is_empty()
-        && !parent.exists()
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!(
-                "Destination parent directory does not exist: {}",
-                parent.display()
-            ),
-        ));
-    }
-
-    if dest.exists() {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("Destination already exists: {}", dest.display()),
-        ));
-    }
-
-    Ok(())
+    Ok(build_file_entry(dest_name, &src_metadata))
 }
 
 fn execute_rename(src: &Path, dest: &Path) -> Result<(), io::Error> {
@@ -85,6 +41,6 @@ fn execute_rename(src: &Path, dest: &Path) -> Result<(), io::Error> {
             format!("Permission denied to rename: {}", dest.display()),
         ),
         _ => err,
-    })?;
-    Ok(())
+    })
 }
+
