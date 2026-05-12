@@ -5,7 +5,7 @@ pub mod info;
 pub mod list;
 pub mod rename;
 pub mod types;
-pub mod validate;
+pub mod utils;
 
 pub use create::create_entry;
 pub use delete::delete_entry;
@@ -14,4 +14,7 @@ pub use info::get_file_info;
 pub use list::list_current_dir;
 pub use rename::rename_entry;
 pub use types::{FileEntry, FsSortField};
-pub use validate::validate_entry_name;
+pub use utils::{
+    build_file_entry, ensure_path_exists, ensure_path_not_exists, extract_filename,
+    validate_entry_name, validate_parent_exists,
+};
