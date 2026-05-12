@@ -2,11 +2,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum FsError {
-    #[error("Entry not found: {path}")]
-    NotFound { path: String },
+    #[error("{label} not found: {path}")]
+    NotFound { label: String, path: String },
 
-    #[error("Entry already exists: {path}")]
-    AlreadyExists { path: String },
+    #[error("{label} already exists: {path}")]
+    AlreadyExists { label: String, path: String },
 
     #[error("Invalid entry name: {reason}")]
     InvalidName { reason: String },
