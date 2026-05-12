@@ -1,10 +1,8 @@
-// src/domain/fs/list.rs
+use std::fs;
 
-use std::{fs, io};
+use crate::domain::fs::{FileEntry, FsError, build_file_entry};
 
-use crate::domain::fs::{FileEntry, build_file_entry};
-
-pub fn list_current_dir(include_hidden: bool) -> Result<Vec<FileEntry>, io::Error> {
+pub fn list_current_dir(include_hidden: bool) -> Result<Vec<FileEntry>, FsError> {
     let entries = fs::read_dir(".")?;
     let mut file_list: Vec<FileEntry> = Vec::new();
 
@@ -24,13 +22,13 @@ pub fn list_current_dir(include_hidden: bool) -> Result<Vec<FileEntry>, io::Erro
     Ok(file_list)
 }
 
-fn extract_dir_entry_name(entry: &fs::DirEntry) -> Result<String, io::Error> {
-    entry.file_name().into_string().map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Filename contains invalid UTF-8",
-        )
-    })
+fn extract_dir_entry_name(entry: &fs::DirEntry) -> Result<String, FsError> {
+    entry
+        .file_name()
+        .into_string()
+        .map_err(|_| FsError::InvalidName {
+            reason: "Filename contains invalid UTF-8".to_string(),
+        })
 }
 
 fn is_hidden_filename(name: &str) -> bool {

@@ -1,13 +1,13 @@
-use std::{fs, io, path::Path};
-
 use crate::domain::fs::{
-    FileEntry, build_file_entry, ensure_path_exists, extract_filename, validate_entry_name,
+    FileEntry, FsError, build_file_entry, ensure_path_exists, extract_filename, validate_entry_name,
 };
+use std::{fs, path::Path};
 
-pub fn delete_entry<P: AsRef<Path>>(path: P, expect_dir: bool) -> Result<FileEntry, io::Error> {
+pub fn delete_entry<P: AsRef<Path>>(path: P, expect_dir: bool) -> Result<FileEntry, FsError> {
     let target = path.as_ref();
 
     let name = extract_filename(target)?;
+
     validate_entry_name(&name)?;
 
     let metadata = validate_deletion_target(target, expect_dir)?;
@@ -17,39 +17,36 @@ pub fn delete_entry<P: AsRef<Path>>(path: P, expect_dir: bool) -> Result<FileEnt
     Ok(build_file_entry(name, &metadata))
 }
 
-fn validate_deletion_target(target: &Path, expect_dir: bool) -> Result<fs::Metadata, io::Error> {
+fn validate_deletion_target(target: &Path, expect_dir: bool) -> Result<fs::Metadata, FsError> {
     let metadata = ensure_path_exists(target, "Target")?;
     let is_dir = metadata.is_dir();
 
     match (expect_dir, is_dir) {
-        (true, false) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!(
+        (true, false) => Err(FsError::TypeMismatch {
+            message: format!(
                 "Target is a file. Remove `--dir` to delete files: {}",
                 target.display()
             ),
-        )),
-        (false, true) => Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!(
+        }),
+        (false, true) => Err(FsError::TypeMismatch {
+            message: format!(
                 "Target is a directory. Use `--dir` to delete directories: {}",
                 target.display()
             ),
-        )),
+        }),
         _ => Ok(metadata),
     }
 }
 
-fn execute_deletion(target: &Path, is_dir: bool) -> Result<(), io::Error> {
+fn execute_deletion(target: &Path, is_dir: bool) -> Result<(), FsError> {
     if is_dir {
         fs::remove_dir(target).map_err(|e| {
-            if e.kind() == io::ErrorKind::DirectoryNotEmpty {
-                io::Error::new(
-                    io::ErrorKind::DirectoryNotEmpty,
-                    format!("Directory not empty: {}", target.display()),
-                )
+            if e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
+                FsError::DirectoryNotEmpty {
+                    path: target.display().to_string(),
+                }
             } else {
-                e
+                FsError::Io(e)
             }
         })?;
     } else {
