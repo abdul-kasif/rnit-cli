@@ -1,6 +1,6 @@
 use std::{fs, io, path::Path};
 
-use crate::domain::fs::FileEntry;
+use crate::domain::fs::{FileEntry, FsError};
 
 pub fn build_file_entry(name: String, metadata: &fs::Metadata) -> FileEntry {
     FileEntry {
@@ -10,86 +10,78 @@ pub fn build_file_entry(name: String, metadata: &fs::Metadata) -> FileEntry {
     }
 }
 
-pub fn ensure_path_exists<P: AsRef<Path>>(path: P, label: &str) -> Result<fs::Metadata, io::Error> {
+pub fn ensure_path_exists<P: AsRef<Path>>(path: P, label: &str) -> Result<fs::Metadata, FsError> {
     let path = path.as_ref();
     fs::metadata(path).map_err(|err| {
         if err.kind() == io::ErrorKind::NotFound {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("{} not found: {}", label, path.display()),
-            )
+            FsError::NotFound {
+                path: path.display().to_string(),
+                label: label.to_string(),
+            }
         } else {
-            err
+            FsError::Io(err)
         }
     })
 }
 
-pub fn ensure_path_not_exists<P: AsRef<Path>>(path: P, label: &str) -> Result<(), io::Error> {
+pub fn ensure_path_not_exists<P: AsRef<Path>>(path: P, label: &str) -> Result<(), FsError> {
     let path = path.as_ref();
 
     match fs::metadata(path) {
-        Ok(_) => Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("{} already exists: {}", label, path.display()),
-        )),
+        Ok(_) => Err(FsError::AlreadyExists {
+            path: path.display().to_string(),
+            label: label.to_string(),
+        }),
 
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
 
-        Err(err) => Err(err),
+        Err(err) => Err(FsError::Io(err)),
     }
 }
 
-pub fn extract_filename<P: AsRef<Path>>(path: P) -> Result<String, io::Error> {
+pub fn extract_filename<P: AsRef<Path>>(path: P) -> Result<String, FsError> {
     path.as_ref()
         .file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Path contains invalid UTF-8"))
+        .ok_or_else(|| FsError::InvalidName {
+            reason: "Path contains invalid UTF-8".to_string(),
+        })
 }
 
-pub fn validate_entry_name(name: &str) -> Result<(), io::Error> {
+pub fn validate_entry_name(name: &str) -> Result<(), FsError> {
     if name.trim().is_empty() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Entry name cannot be empty",
-        ));
+        return Err(FsError::InvalidName {
+            reason: "Entry name cannot be empty".to_string(),
+        });
     }
-
     if name == "." || name == ".." {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Entry name '{}' is reserved", name),
-        ));
+        return Err(FsError::InvalidName {
+            reason: format!("Entry name '{}' is reserved", name),
+        });
     }
-
     if name.contains('\0') || name.contains('/') || name.contains('\\') {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Entry name contains invalid characters (\\0, /, \\)",
-        ));
+        return Err(FsError::InvalidName {
+            reason: "Entry name contains invalid characters (\\0, /, \\)".to_string(),
+        });
     }
-
     if name.len() > 255 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Entry name exceeds maximum length (255 bytes)",
-        ));
+        return Err(FsError::InvalidName {
+            reason: "Entry name exceeds maximum length (255 bytes)".to_string(),
+        });
     }
-
     Ok(())
 }
 
-pub fn validate_parent_exists<P: AsRef<Path>>(path: P) -> Result<(), io::Error> {
+pub fn validate_parent_exists<P: AsRef<Path>>(path: P) -> Result<(), FsError> {
     let path = path.as_ref();
     if let Some(parent) = path.parent()
         && !parent.as_os_str().is_empty()
         && !parent.exists()
     {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("Parent directory does not exist: {}", parent.display()),
-        ));
+        return Err(FsError::ParentNotFound {
+            path: parent.display().to_string(),
+        });
     }
-
     Ok(())
 }
