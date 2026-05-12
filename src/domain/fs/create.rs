@@ -1,48 +1,28 @@
 use std::{fs, io, path::Path};
 
-use crate::domain::fs::{FileEntry, validate_entry_name};
+use crate::domain::fs::{
+    FileEntry, build_file_entry, ensure_path_not_exists, extract_filename, validate_entry_name,
+    validate_parent_exists,
+};
 
 pub fn create_entry<P: AsRef<Path>>(path: P, is_dir: bool) -> Result<FileEntry, io::Error> {
     let target = path.as_ref();
 
-    let entry_name = target
-        .file_name()
-        .and_then(|os_str| os_str.to_str())
-        .ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Entry name contains invalid UTF-8",
-            )
-        })?;
+    let name = extract_filename(target)?;
 
-    validate_entry_name(entry_name)?;
+    validate_entry_name(&name)?;
 
-    validate_creation_target(target)?;
+    validate_parent_exists(target)?;
+
+    let label = if is_dir { "Directory" } else { "File" };
+
+    ensure_path_not_exists(target, label)?;
 
     execute_creation(target, is_dir)?;
 
-    Ok(build_file_entry(entry_name, is_dir))
-}
+    let metadata = fs::metadata(target)?;
 
-fn validate_creation_target(path: &Path) -> Result<(), io::Error> {
-    if path.exists() {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("Entry already exists: {}", path.display()),
-        ));
-    }
-
-    if let Some(parent) = path.parent()
-        && !parent.as_os_str().is_empty()
-        && !parent.exists()
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("Parent directory does not exist: {}", parent.display()),
-        ));
-    }
-
-    Ok(())
+    Ok(build_file_entry(name, &metadata))
 }
 
 fn execute_creation(path: &Path, is_dir: bool) -> Result<(), io::Error> {
@@ -53,12 +33,4 @@ fn execute_creation(path: &Path, is_dir: bool) -> Result<(), io::Error> {
     }
 
     Ok(())
-}
-
-fn build_file_entry(entry_name: &str, is_dir: bool) -> FileEntry {
-    FileEntry {
-        name: entry_name.to_string(),
-        size: 0,
-        is_dir,
-    }
 }
