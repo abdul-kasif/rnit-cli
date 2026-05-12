@@ -1,18 +1,11 @@
 use std::{fs, io, path::Path};
 
-use crate::domain::fs::FileEntry;
+use crate::domain::fs::{FileEntry, build_file_entry, extract_filename};
 
 pub fn get_file_info(path: &Path) -> Result<FileEntry, io::Error> {
+    let name = extract_filename(path)?;
+
     let metadata = fs::metadata(path)?;
 
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| path.to_string_lossy().into_owned());
-
-    Ok(FileEntry {
-        name,
-        size: metadata.len(),
-        is_dir: metadata.is_dir(),
-    })
+    Ok(build_file_entry(name, &metadata))
 }
