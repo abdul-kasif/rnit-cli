@@ -1,9 +1,12 @@
-use std::fs;
+use std::{fs, path::Path};
 
 use crate::domain::fs::{FileEntry, FsError, build_file_entry};
 
-pub fn list_current_dir(include_hidden: bool) -> Result<Vec<FileEntry>, FsError> {
-    let entries = fs::read_dir(".")?;
+pub fn list_current_dir<P: AsRef<Path>>(
+    path: P,
+    include_hidden: bool,
+) -> Result<Vec<FileEntry>, FsError> {
+    let entries = fs::read_dir(path)?;
     let mut file_list: Vec<FileEntry> = Vec::new();
 
     for entry_result in entries {

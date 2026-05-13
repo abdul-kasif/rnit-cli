@@ -1,4 +1,4 @@
-use std::path::{self, PathBuf};
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 mod core;
@@ -34,6 +34,9 @@ enum Commands {
 enum FsCommands {
     /// List files in the current directory
     List {
+        #[arg(index = 1)]
+        path: Option<PathBuf>,
+
         #[arg(short, long, default_value_t = false)]
         all: bool,
 
@@ -47,7 +50,7 @@ enum FsCommands {
     /// Get information about File/Folder
     Info {
         #[arg(index = 1)]
-        path: path::PathBuf,
+        path: PathBuf,
 
         #[command(flatten)]
         output: OutputArgs,
@@ -123,8 +126,15 @@ fn main() {
 fn run(cli: Cli) -> Result<(), FsError> {
     match cli.command {
         Commands::Fs { action } => match action {
-            FsCommands::List { all, query, output } => {
-                let mut entries = list_current_dir(all)?;
+            FsCommands::List {
+                path,
+                all,
+                query,
+                output,
+            } => {
+                let target_path = path.as_deref().unwrap_or(Path::new("."));
+
+                let mut entries = list_current_dir(target_path, all)?;
 
                 let sort_fn = query.sort.map(|field| match field {
                     FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),

@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::domain::fs::{FileEntry, FsError, list_current_dir};
 use globset::GlobBuilder;
 
@@ -5,7 +7,9 @@ pub fn find_current_dir(
     include_hidden: bool,
     name_filter: Option<&str>,
 ) -> Result<Vec<FileEntry>, FsError> {
-    let mut entries = list_current_dir(include_hidden)?;
+    let target_path = Path::new(".");
+
+    let mut entries = list_current_dir(target_path, include_hidden)?;
 
     let Some(pattern) = name_filter else {
         return Ok(entries);
@@ -24,4 +28,3 @@ pub fn find_current_dir(
 
     Ok(entries)
 }
-
