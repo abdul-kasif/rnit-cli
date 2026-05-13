@@ -40,12 +40,23 @@ pub fn ensure_path_not_exists<P: AsRef<Path>>(path: P, label: &str) -> Result<()
 }
 
 pub fn extract_filename<P: AsRef<Path>>(path: P) -> Result<String, FsError> {
-    path.as_ref()
+    let path_ref = path.as_ref();
+
+    if path_ref
+        .to_str()
+        .is_some_and(|s| s.ends_with("/") || s.ends_with("\\"))
+    {
+        return Err(FsError::InvalidName {
+            reason: "Path ends with a directory seperator".to_string(),
+        });
+    }
+
+    path_ref
         .file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.to_string())
         .ok_or_else(|| FsError::InvalidName {
-            reason: "Path contains invalid UTF-8".to_string(),
+            reason: "Path contains invalid UTF-8 or has no filename component".to_string(),
         })
 }
 
