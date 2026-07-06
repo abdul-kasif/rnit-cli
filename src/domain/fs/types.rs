@@ -1,7 +1,7 @@
 use clap::ValueEnum;
 use serde::Serialize;
 
-use crate::core::traits::TableRender;
+use crate::core::{traits::TableRender, utils::format_human_readable_size};
 
 #[derive(Debug, Serialize)]
 pub struct FileEntry {
@@ -19,7 +19,7 @@ impl TableRender for FileEntry {
         let size_str = if self.is_dir {
             "-".to_string()
         } else {
-            format!("{}B", self.size)
+            format_human_readable_size(self.size)
         };
 
         let type_str = if self.is_dir { "DIR" } else { "FILE" };
