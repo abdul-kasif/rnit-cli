@@ -48,12 +48,20 @@ pub enum FsCommands {
     },
     /// Find files in the current directory
     Find {
-        #[arg(long)]
-        name: Option<String>,
+        /// The search pattern (e.g., "*.rs")
+        #[arg(index = 1)]
+        pattern: String,
+
+        /// Optional directory to search in (defaults to ".")
+        #[arg(index = 2)]
+        path: Option<PathBuf>,
+
         #[arg(short, long, default_value_t = false)]
         all: bool,
+
         #[command(flatten)]
         query: QueryArgs<FsSortField>,
+
         #[command(flatten)]
         output: OutputArgs,
     },
@@ -118,12 +126,13 @@ pub fn run(action: FsCommands) -> Result<(), FsError> {
             print_output(std::slice::from_ref(&entry), &output.format);
         }
         FsCommands::Find {
-            name,
+            pattern,
+            path,
             all,
             query,
             output,
         } => {
-            let mut entries = find_current_dir(all, name.as_deref())?;
+            let mut entries = find_current_dir(all, &pattern, path)?;
 
             let sort_fn = query.sort.map(|field| match field {
                 FsSortField::Name => |a: &FileEntry, b: &FileEntry| a.name.cmp(&b.name),

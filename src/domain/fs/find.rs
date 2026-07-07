@@ -1,19 +1,16 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::domain::fs::{FileEntry, FsError, list_current_dir};
 use globset::GlobBuilder;
 
 pub fn find_current_dir(
     include_hidden: bool,
-    name_filter: Option<&str>,
+    pattern: &str,
+    path: Option<PathBuf>,
 ) -> Result<Vec<FileEntry>, FsError> {
-    let target_path = Path::new(".");
+    let target_path = path.as_deref().unwrap_or(Path::new("."));
 
     let mut entries = list_current_dir(target_path, include_hidden)?;
-
-    let Some(pattern) = name_filter else {
-        return Ok(entries);
-    };
 
     let matcher = GlobBuilder::new(pattern)
         .case_insensitive(true)
