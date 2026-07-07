@@ -28,34 +28,53 @@ pub use utils::{
 
 #[derive(Subcommand)]
 pub enum FsCommands {
-    /// List files in the current directory
+    /// List files and directories
+    ///
+    /// Displays the contents of the specified directory. By default, it reads the current
+    /// directory and hides system/hidden files. Use modifiers to sort, filter, and limit the output.
     List {
+        /// The target directory to list (defaults to the current directory ".")
         #[arg(index = 1)]
         path: Option<PathBuf>,
+
+        /// Include hidden files and directories (those starting with a dot '.')
         #[arg(short, long, default_value_t = false)]
         all: bool,
+
         #[command(flatten)]
         query: QueryArgs<FsSortField>,
+
         #[command(flatten)]
         output: OutputArgs,
     },
-    /// Get information about File/Folder
+
+    /// Get detailed information about a specific file or folder
+    ///
+    /// Retrieves standard metadata for the target path, including its exact size,
+    /// type, and permissions. Useful for programmatic inspection via JSON output.
     Info {
+        /// The exact path to the file or directory you want to inspect
         #[arg(index = 1)]
         path: PathBuf,
+
         #[command(flatten)]
         output: OutputArgs,
     },
-    /// Find files in the current directory
+
+    /// Find files matching a specific pattern
+    ///
+    /// Performs a glob-based search (e.g., "*.rs", "config_*.json") in the specified directory.
+    /// The search is case-insensitive by default.
     Find {
-        /// The search pattern (e.g., "*.rs")
+        /// The search pattern to match against (e.g., "*.txt")
         #[arg(index = 1)]
         pattern: String,
 
-        /// Optional directory to search in (defaults to ".")
+        /// Optional directory to search within (defaults to the current directory ".")
         #[arg(index = 2)]
         path: Option<PathBuf>,
 
+        /// Include hidden files and directories in the search results
         #[arg(short, long, default_value_t = false)]
         all: bool,
 
@@ -65,36 +84,66 @@ pub enum FsCommands {
         #[command(flatten)]
         output: OutputArgs,
     },
-    /// Create a file/directory entry
+
+    /// Create a new file or directory
+    ///
+    /// Creates an empty file by default. Use the --dir flag to create a directory instead.
+    /// Will fail if the target already exists to prevent accidental overwrites.
     Create {
+        /// The name or path of the new entry to create
         #[arg(index = 1)]
         name: String,
-        #[arg(long)]
+
+        /// Create a directory instead of a standard file
+        #[arg(short, long)]
         dir: bool,
+
+        /// Preview what would be created without actually modifying the filesystem
         #[arg(long)]
         dry_run: bool,
+
         #[command(flatten)]
         output: OutputArgs,
     },
-    /// Delete a file/directory
+
+    /// Permanently delete a file or directory
+    ///
+    /// Removes the specified target from the filesystem. By default, it expects a file.
+    /// You must explicitly provide the --dir flag to delete a directory.
     Delete {
+        /// The path to the file or directory you want to remove
         #[arg(index = 1)]
         path: PathBuf,
-        #[arg(long)]
+
+        /// Confirm that the target is a directory (required for deleting folders)
+        #[arg(short, long)]
         dir: bool,
+
+        /// Preview what would be deleted without actually modifying the filesystem
         #[arg(long)]
         dry_run: bool,
+
         #[command(flatten)]
         output: OutputArgs,
     },
-    /// Rename a file/directory
+
+    /// Rename or move a file or directory
+    ///
+    /// Safely changes the name of a target or moves it to a new path.
+    /// Will fail if a file already exists at the destination path.
     Rename {
+        /// The current path of the file or directory
         #[arg(index = 1)]
         source: PathBuf,
+
+        /// The new name or path for the target
         #[arg(index = 2)]
         destination: PathBuf,
+
+        /// Preview the rename operation without actually modifying the filesystem
         #[arg(long)]
         dry_run: bool,
+
         #[command(flatten)]
         output: OutputArgs,
     },
