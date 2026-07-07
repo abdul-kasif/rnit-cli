@@ -1,7 +1,10 @@
 use clap::ValueEnum;
 use serde::Serialize;
 
-use crate::core::{traits::TableRender, utils::format_human_readable_size};
+use crate::core::{
+    traits::{Alignment, TableRender},
+    utils::format_human_readable_size,
+};
 
 #[derive(Debug, Serialize)]
 pub struct FileEntry {
@@ -13,6 +16,10 @@ pub struct FileEntry {
 impl TableRender for FileEntry {
     fn headers() -> &'static [&'static str] {
         &["NAME", "SIZE", "TYPE"]
+    }
+
+    fn alignments() -> &'static [Alignment] {
+        &[Alignment::Left, Alignment::Right, Alignment::Left]
     }
 
     fn row(&self) -> Vec<String> {

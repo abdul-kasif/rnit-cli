@@ -1,4 +1,4 @@
-use crate::core::TableRender;
+use crate::core::traits::{Alignment, TableRender};
 
 pub fn print_table<T: TableRender>(entries: &[T]) {
     let headers: Vec<String> = T::headers().iter().map(|h| h.to_string()).collect();
@@ -7,6 +7,7 @@ pub fn print_table<T: TableRender>(entries: &[T]) {
         return;
     }
 
+    let alignments = T::alignments();
     let mut widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
 
     for entry in entries {
@@ -22,25 +23,34 @@ pub fn print_table<T: TableRender>(entries: &[T]) {
             .iter()
             .enumerate()
             .map(|(i, cell)| {
-                format!(
-                    "{:<width$}",
-                    cell,
-                    width = widths.get(i).copied().unwrap_or(0)
-                )
+                let width = widths.get(i).copied().unwrap_or(0);
+                let align = alignments.get(i).unwrap_or(&Alignment::Left);
+
+                match align {
+                    Alignment::Left => format!("{:<width$}", cell, width = width),
+                    Alignment::Right => format!("{:>width$}", cell, width = width),
+                }
             })
             .collect::<Vec<_>>()
             .join("  ")
     };
 
     println!("{}", format_line(&headers));
-    println!(
-        "{}",
-        widths
-            .iter()
-            .map(|w| "-".repeat(*w))
-            .collect::<Vec<_>>()
-            .join("  ")
-    );
+
+    let separators: Vec<String> = widths
+        .iter()
+        .enumerate()
+        .map(|(i, &w)| {
+            let dashes = "-".repeat(w);
+            let align = alignments.get(i).unwrap_or(&Alignment::Left);
+            match align {
+                Alignment::Left => format!("{:<width$}", dashes, width = w),
+                Alignment::Right => format!("{:>width$}", dashes, width = w),
+            }
+        })
+        .collect();
+
+    println!("{}", separators.join("  "));
 
     if entries.is_empty() {
         eprintln!("(no results)");
@@ -50,4 +60,3 @@ pub fn print_table<T: TableRender>(entries: &[T]) {
         }
     }
 }
-
