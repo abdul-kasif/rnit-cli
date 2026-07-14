@@ -45,5 +45,18 @@ fn parse_process_stat(
     let remainder = content_buf[end_paren + 1..].trim_start();
     let state = remainder.chars().next().unwrap_or('?');
 
-    Some(ProcessInfo { pid, name, state })
+    let mut fields = remainder.split_whitespace();
+    let rss_pages = fields
+        .nth(21)
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    let rss_bytes = rss_pages * 4096;
+
+    Some(ProcessInfo {
+        pid,
+        name,
+        state,
+        rss: rss_bytes,
+    })
 }
