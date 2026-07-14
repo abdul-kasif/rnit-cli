@@ -7,6 +7,8 @@ mod output;
 
 use domain::fs::FsCommands;
 
+use crate::domain::proc::ProcCommands;
+
 #[derive(Parser)]
 #[command(
     name = "rnit",
@@ -25,6 +27,11 @@ enum Commands {
         #[command(subcommand)]
         action: FsCommands,
     },
+
+    Proc {
+        #[command(subcommand)]
+        action: ProcCommands,
+    },
 }
 
 fn main() {
@@ -41,8 +48,10 @@ fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
         Commands::Fs { action } => {
             domain::fs::run(action)?;
         }
+        Commands::Proc { action } => {
+            domain::proc::run(action);
+        }
     }
 
     Ok(())
 }
-
