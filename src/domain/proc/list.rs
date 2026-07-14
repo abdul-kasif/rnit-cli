@@ -2,6 +2,13 @@ use std::{fmt::Write, fs, io::Read, path::Path};
 
 use crate::domain::proc::ProcessInfo;
 
+fn get_system_page_size() -> u64 {
+    unsafe {
+        let res = libc::sysconf(libc::_SC_PAGESIZE);
+        if res > 0 { res as u64 } else { 4096 }
+    }
+}
+
 pub fn get_all_processes() -> Vec<ProcessInfo> {
     let proc_dir = Path::new("/proc");
 
@@ -9,6 +16,7 @@ pub fn get_all_processes() -> Vec<ProcessInfo> {
         return Vec::new();
     };
 
+    let page_size = get_system_page_size();
     let mut path_buf = String::with_capacity(64);
     let mut content_buf = String::with_capacity(1024);
 
@@ -20,7 +28,7 @@ pub fn get_all_processes() -> Vec<ProcessInfo> {
 
             let pid = name_str.parse::<u32>().ok()?;
 
-            parse_process_stat(pid, &mut path_buf, &mut content_buf)
+            parse_process_stat(pid, &mut path_buf, &mut content_buf, page_size)
         })
         .collect()
 }
@@ -29,6 +37,7 @@ fn parse_process_stat(
     pid: u32,
     path_buf: &mut String,
     content_buf: &mut String,
+    page_size: u64,
 ) -> Option<ProcessInfo> {
     path_buf.clear();
     write!(path_buf, "/proc/{}/stat", pid).ok()?;
@@ -51,7 +60,7 @@ fn parse_process_stat(
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or(0);
 
-    let rss_bytes = rss_pages * 4096;
+    let rss_bytes = rss_pages * page_size;
 
     Some(ProcessInfo {
         pid,
