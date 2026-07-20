@@ -73,3 +73,100 @@ fn parse_stat_content(pid: u32, content: &str, page_size: u64) -> Option<Process
         rss: rss_bytes,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_stat_string(name: &str, state: char, rss_pages: u64) -> String {
+        // Creates a string with the exact number of fields needed to reach RSS.
+        // 1: pid
+        // 2: name
+        // 3: state
+        // 4-23: zeros (20 filler fields)
+        // 24: rss
+        format!(
+            "1234 ({}) {} 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 {} 0 0",
+            name, state, rss_pages
+        )
+    }
+
+    #[test]
+    fn test_parse_standard_process() {
+        let content = create_stat_string("systemd", 'S', 500);
+        let info = parse_stat_content(1234, &content, 4096).unwrap();
+
+        assert_eq!(info.pid, 1234);
+        assert_eq!(info.name, "systemd");
+        assert_eq!(info.state, 'S');
+        assert_eq!(info.rss, 500 * 4096);
+    }
+
+    #[test]
+    fn test_parse_process_name_with_spaces() {
+        // Tricky edge case: Thread names often contain spaces
+        let content = create_stat_string("kworker/u4:2", 'I', 0);
+        let info = parse_stat_content(1234, &content, 4096).unwrap();
+
+        assert_eq!(info.name, "kworker/u4:2");
+        assert_eq!(info.state, 'I');
+    }
+
+    #[test]
+    fn test_parse_process_name_with_parentheses() {
+        // Crucial edge case: Processes can rename themselves to contain parentheses.
+        let content = create_stat_string("worker (1)", 'R', 100);
+        let info = parse_stat_content(1234, &content, 1024).unwrap();
+
+        assert_eq!(info.name, "worker (1)");
+        assert_eq!(info.state, 'R');
+        assert_eq!(info.rss, 100 * 1024);
+    }
+
+    #[test]
+    fn test_parse_missing_rss_field() {
+        // Simulates a truncated file where the RSS field hasn't been written
+        let content = "1234 (short_proc) S 0 0";
+        let info = parse_stat_content(1234, content, 4096).unwrap();
+
+        // Should gracefully fall back to 0 due to `.unwrap_or(0)`
+        assert_eq!(info.rss, 0);
+    }
+
+    #[test]
+    fn test_parse_malformed_no_parentheses() {
+        // Completely invalid format, should return None
+        let content = "1234 no_parens_here S 0 0 0";
+        assert!(parse_stat_content(1234, content, 4096).is_none());
+    }
+
+    #[test]
+    fn test_parse_zero_rss() {
+        // Kernel threads often have 0 RSS
+        let content = create_stat_string("kthreadd", 'S', 0);
+        let info = parse_stat_content(2, &content, 4096).unwrap();
+
+        assert_eq!(info.rss, 0);
+    }
+
+    #[test]
+    fn test_integration_current_process() {
+        // This test actually reads the real filesystem.
+        // It ensures the whole pipeline works by finding the Rust test runner process.
+        if cfg!(target_os = "linux") {
+            let processes = get_all_processes();
+            let my_pid = std::process::id();
+
+            let my_proc = processes.iter().find(|p| p.pid == my_pid);
+
+            assert!(
+                my_proc.is_some(),
+                "The test runner PID ({}) should be found in /proc",
+                my_pid
+            );
+
+            let proc_info = my_proc.unwrap();
+            assert!(proc_info.rss > 0, "Test runner should consume some memory");
+        }
+    }
+}
