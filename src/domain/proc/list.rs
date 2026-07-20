@@ -25,7 +25,6 @@ pub fn get_all_processes() -> Vec<ProcessInfo> {
         .filter_map(|entry| {
             let file_name = entry.file_name();
             let name_str = file_name.to_string_lossy();
-
             let pid = name_str.parse::<u32>().ok()?;
 
             parse_process_stat(pid, &mut path_buf, &mut content_buf, page_size)
@@ -46,15 +45,20 @@ fn parse_process_stat(
     let mut file = fs::File::open(&path_buf).ok()?;
     file.read_to_string(content_buf).ok()?;
 
-    let start_paren = content_buf.find('(')?;
-    let end_paren = content_buf.rfind(')')?;
+    parse_stat_content(pid, content_buf, page_size)
+}
 
-    let name = content_buf[start_paren + 1..end_paren].to_string();
+fn parse_stat_content(pid: u32, content: &str, page_size: u64) -> Option<ProcessInfo> {
+    let start_paren = content.find('(')?;
+    let end_paren = content.rfind(')')?;
 
-    let remainder = content_buf[end_paren + 1..].trim_start();
+    let name = content[start_paren + 1..end_paren].to_string();
+
+    let remainder = content[end_paren + 1..].trim_start();
     let state = remainder.chars().next().unwrap_or('?');
 
     let mut fields = remainder.split_whitespace();
+
     let rss_pages = fields
         .nth(21)
         .and_then(|s| s.parse::<u64>().ok())
