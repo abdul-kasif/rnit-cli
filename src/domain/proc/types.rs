@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use serde::Serialize;
 
 use crate::core::{
@@ -36,4 +37,11 @@ impl TableRender for ProcessInfo {
             rss,
         ]
     }
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq, Default)]
+pub enum ProcSortField {
+    #[default]
+    Name,
+    Size,
 }
