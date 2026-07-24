@@ -42,6 +42,8 @@ impl TableRender for ProcessInfo {
 #[derive(ValueEnum, Clone, Debug, PartialEq, Default)]
 pub enum ProcSortField {
     #[default]
+    Pid,
     Name,
-    Size,
+    State,
+    Memory, // for user convinence, RSS is aliased as memory
 }
