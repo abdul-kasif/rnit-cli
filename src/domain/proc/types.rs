@@ -12,11 +12,12 @@ pub struct ProcessInfo {
     pub name: String,
     pub state: char,
     pub rss: u64,
+    pub cpu: f64,
 }
 
 impl TableRender for ProcessInfo {
     fn headers() -> &'static [&'static str] {
-        &["PID", "NAME", "STATE", "MEMORY"]
+        &["PID", "NAME", "STATE", "CPU (%)", "MEMORY"]
     }
 
     fn alignments() -> &'static [Alignment] {
@@ -24,6 +25,7 @@ impl TableRender for ProcessInfo {
             Alignment::Left,
             Alignment::Left,
             Alignment::Left,
+            Alignment::Right,
             Alignment::Right,
         ]
     }
@@ -34,6 +36,7 @@ impl TableRender for ProcessInfo {
             self.pid.to_string(),
             self.name.clone(),
             self.state.to_string(),
+            self.cpu.to_string(),
             rss,
         ]
     }
