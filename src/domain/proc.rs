@@ -32,6 +32,7 @@ pub fn run(action: ProcCommands) {
                 ProcSortField::Name => |a: &ProcessInfo, b: &ProcessInfo| a.name.cmp(&b.name),
                 ProcSortField::State => |a: &ProcessInfo, b: &ProcessInfo| a.state.cmp(&b.state),
                 ProcSortField::Memory => |a: &ProcessInfo, b: &ProcessInfo| a.rss.cmp(&b.rss),
+                ProcSortField::Cpu => |a: &ProcessInfo, b: &ProcessInfo| a.cpu.total_cmp(&b.cpu),
             });
 
             apply_sort(&mut processes, sort_fn, query.order);

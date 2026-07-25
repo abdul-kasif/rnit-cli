@@ -49,4 +49,5 @@ pub enum ProcSortField {
     Name,
     State,
     Memory, // for user convinence, RSS is aliased as memory
+    Cpu,
 }
