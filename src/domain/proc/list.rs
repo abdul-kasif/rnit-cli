@@ -1,13 +1,17 @@
-use std::{collections::HashMap, fmt::Write, fs, io::Read, path::Path, thread, time::Duration};
-
 use crate::domain::proc::ProcessInfo;
+use std::{collections::HashMap, fmt::Write, fs, io::Read, path::Path};
 
-struct RawSnapshot {
-    pid: u32,
-    name: String,
-    state: char,
-    rss: u64,
-    total_ticks: u64, // Combined utime + stime
+pub struct RawSnapshot {
+    pub pid: u32,
+    pub name: String,
+    pub state: char,
+    pub rss: u64,
+    pub total_ticks: u64,
+}
+
+pub struct ProcessState {
+    pub sys_ticks: u64,
+    pub snapshots: Vec<RawSnapshot>,
 }
 
 fn get_system_page_size() -> u64 {
@@ -31,7 +35,6 @@ fn get_total_system_ticks() -> Option<u64> {
     parts.next();
 
     let total: u64 = parts.filter_map(|s| s.parse::<u64>().ok()).sum();
-
     Some(total)
 }
 
@@ -99,45 +102,41 @@ fn parse_stat_content(pid: u32, content: &str, page_size: u64) -> Option<RawSnap
     })
 }
 
-/// Fetches all processes and populates their accurate CPU usage percentage
-pub fn get_all_processes() -> Vec<ProcessInfo> {
+pub fn capture_current_state() -> ProcessState {
     let page_size = get_system_page_size();
-    let num_cores = get_num_cpu_cores();
     let mut path_buf = String::with_capacity(64);
     let mut content_buf = String::with_capacity(1024);
 
-    // 1. Capture snapshot A
-    let sys_ticks_a = get_total_system_ticks().unwrap_or(0);
-    let snap_a = capture_raw_snapshots(page_size, &mut path_buf, &mut content_buf);
+    ProcessState {
+        sys_ticks: get_total_system_ticks().unwrap_or(0),
+        snapshots: capture_raw_snapshots(page_size, &mut path_buf, &mut content_buf),
+    }
+}
 
-    // 2. Sample window (200ms gives solid accuracy without long CLI pauses)
-    thread::sleep(Duration::from_millis(200));
+pub fn calculate_process_info(
+    prev_state: &ProcessState,
+    curr_state: &ProcessState,
+) -> Vec<ProcessInfo> {
+    let num_cores = get_num_cpu_cores();
+    let sys_delta = curr_state.sys_ticks.saturating_sub(prev_state.sys_ticks);
 
-    // 3. Capture snapshot B
-    let sys_ticks_b = get_total_system_ticks().unwrap_or(0);
-    let snap_b = capture_raw_snapshots(page_size, &mut path_buf, &mut content_buf);
+    let map_prev: HashMap<u32, &RawSnapshot> =
+        prev_state.snapshots.iter().map(|p| (p.pid, p)).collect();
 
-    let sys_delta = sys_ticks_b.saturating_sub(sys_ticks_a);
-
-    // Index Snapshot A into a HashMap for O(1) correlation
-    let map_a: HashMap<u32, RawSnapshot> = snap_a.into_iter().map(|p| (p.pid, p)).collect();
-
-    // Average total system ticks per single core during the sampling interval
     let sys_delta_per_core = if num_cores > 0.0 {
         sys_delta as f64 / num_cores
     } else {
         sys_delta as f64
     };
 
-    // 4. Calculate CPU delta percent (top-style: 100% = 1 core fully saturated)
-    snap_b
-        .into_iter()
+    curr_state
+        .snapshots
+        .iter()
         .map(|b| {
             let cpu_percentage = if sys_delta_per_core > 0.0 {
-                if let Some(a) = map_a.get(&b.pid) {
+                if let Some(a) = map_prev.get(&b.pid) {
                     let proc_delta = b.total_ticks.saturating_sub(a.total_ticks);
                     let raw_pct = (proc_delta as f64 / sys_delta_per_core) * 100.0;
-
                     (raw_pct * 100.0).round() / 100.0
                 } else {
                     0.0
@@ -148,7 +147,7 @@ pub fn get_all_processes() -> Vec<ProcessInfo> {
 
             ProcessInfo {
                 pid: b.pid,
-                name: b.name,
+                name: b.name.clone(),
                 state: b.state,
                 rss: b.rss,
                 cpu: cpu_percentage,
@@ -230,27 +229,6 @@ mod tests {
         let info = parse_stat_content(2, &content, 4096).unwrap();
 
         assert_eq!(info.rss, 0);
-    }
-
-    #[test]
-    fn test_integration_current_process() {
-        // This test actually reads the real filesystem.
-        // It ensures the whole pipeline works by finding the Rust test runner process.
-        if cfg!(target_os = "linux") {
-            let processes = get_all_processes();
-            let my_pid = std::process::id();
-
-            let my_proc = processes.iter().find(|p| p.pid == my_pid);
-
-            assert!(
-                my_proc.is_some(),
-                "The test runner PID ({}) should be found in /proc",
-                my_pid
-            );
-
-            let proc_info = my_proc.unwrap();
-            assert!(proc_info.rss > 0, "Test runner should consume some memory");
-        }
     }
 
     #[test]

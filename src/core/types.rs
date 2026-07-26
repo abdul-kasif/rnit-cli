@@ -7,7 +7,7 @@ pub enum OutputFormat {
     Json,
 }
 
-#[derive(ValueEnum, Clone, Debug, PartialEq, Default)]
+#[derive(ValueEnum, Clone, Debug, PartialEq, Copy, Default)]
 pub enum SortOrder {
     #[default]
     Asc,
